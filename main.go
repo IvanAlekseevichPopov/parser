@@ -1,4 +1,4 @@
-// Echo4 выводит аргументы командной строки
+// parser - scope links of site
 package main
 
 import (
@@ -15,6 +15,7 @@ func main() {
 	var site string
 	var queryLimit int
 	var threads int
+	links := make(map[int]string)
 
 	flag.StringVar(&site, "site", "", "http://example.com")
 	flag.IntVar(&queryLimit, "l", -1, "Limit of queries. Unlimited by default")
@@ -37,13 +38,14 @@ func main() {
 		switch {
 		case tt == html.ErrorToken:
 			// End of the document, we're done
-			return
+			break //not working return - exit
 		case tt == html.StartTagToken:
 			t := z.Token()
 
 			for _, a := range t.Attr {
 				if a.Key == "href" {
-					fmt.Println("Found href:", a.Val)
+					// fmt.Println("Found href:", a.Val)
+					links[len(links)] = a.Val
 					break
 				}
 			}
@@ -53,28 +55,9 @@ func main() {
 			// }
 		}
 	}
-	// bytes, _ := ioutil.ReadAll(resp.Body)
-
-	// fmt.Println("HTML:\n\n", string(bytes))
-
 	resp.Body.Close()
-	// fmt.Println(site)
-	// doc, err := goquery.NewDocument(site)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	fmt.Println(links)
 
-	// doc.Find("a").Each(func(i int, s *goquery.Selection) {
-	// 	// For each item found, get the band and title
-	// 	// band := s.Find("a").Text()
-	// 	// title := s.Find("i").Text()
-	// 	// for _, b := range s.Attr("href") {
-	// 	// 	fmt.Printf("%s \n", b)
-	// 	// }
-	// 	fmt.Printf(s.Attr("href"))
-	// 	// os.Exit(0)
-	// })
-	// fmt.Println(strings.TrimSpace(resp.Find("a").Href()))
 }
 
 func isVaildSiteName(name string) bool {
