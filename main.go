@@ -42,6 +42,22 @@ func main() {
 	for _, link := range links {
 		fmt.Printf("%s\n", link)
 	}
+
+	lin := make(map[int]int)
+	lin[0] = 1
+	lin[1] = 2
+	lin[2] = 3
+	fmt.Printf("%v", lin)
+	i := 0
+	for j := 0; j < 10; j++ {
+		// for {
+		li := lin[i]
+		fmt.Printf("%d\n", li)
+		lin[i+3] = i + 4
+		delete(lin, i)
+		i++
+	}
+	fmt.Printf("%v", lin)
 }
 
 func isVaildSiteName(name string) bool {
@@ -100,9 +116,9 @@ func getLinks(url string) map[int]string {
 
 			for _, a := range t.Attr {
 				if a.Key == "href" {
-					if -1 != strings.Index(a.Val, "catalog") {
-						links[len(links)] = a.Val
-					}
+					// if -1 != strings.Index(a.Val, "catalog") {
+					links[len(links)] = a.Val
+					// }
 					break
 				}
 			}
