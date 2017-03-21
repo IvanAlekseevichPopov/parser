@@ -32,32 +32,25 @@ func main() {
 	fmt.Printf("Start parsing %s\n", site)
 
 	links = getLinks(site)
-	// for {
-	// fmt.Printf("%s\n", links[0])
-	// delete(links, 0)
-	// fmt.Printf("%s\n", links[1])
-	// delete(links, 1)
-	// }
+	i := 0
+	shift := len(links)
+	for x := 0; x < 100; x++ {
+		fmt.Printf("\nLINKS - %v\n\n", links)
+		fmt.Printf("Length - %d\n", len(links))
+		fmt.Printf("Url - %s\n", links[i])
+		newLinks := getLinks(site + links[i])
+		fmt.Printf("NewLinks - %v\n", newLinks)
+		delete(links, i)
+		i++
+		for _, url := range newLinks {
+			links[shift] = url
+			shift++
+		}
+	}
 
 	for _, link := range links {
 		fmt.Printf("%s\n", link)
 	}
-
-	lin := make(map[int]int)
-	lin[0] = 1
-	lin[1] = 2
-	lin[2] = 3
-	fmt.Printf("%v", lin)
-	i := 0
-	for j := 0; j < 10; j++ {
-		// for {
-		li := lin[i]
-		fmt.Printf("%d\n", li)
-		lin[i+3] = i + 4
-		delete(lin, i)
-		i++
-	}
-	fmt.Printf("%v", lin)
 }
 
 func isVaildSiteName(name string) bool {
@@ -65,7 +58,7 @@ func isVaildSiteName(name string) bool {
 		return false
 	}
 
-	if -1 == strings.Index(name, "http://") {
+	if -1 == strings.Index(name, "http://") && -1 == strings.Index(name, "https://") {
 		return false
 	}
 
@@ -117,8 +110,9 @@ func getLinks(url string) map[int]string {
 			for _, a := range t.Attr {
 				if a.Key == "href" {
 					// if -1 != strings.Index(a.Val, "catalog") {
-					links[len(links)] = a.Val
-					// }
+					if -1 == strings.Index(a.Val, "#") {
+						links[len(links)] = a.Val
+					}
 					break
 				}
 			}
