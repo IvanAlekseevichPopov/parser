@@ -15,13 +15,15 @@ import (
 
 func main() {
 	var site string
-	var queryLimit int
-	var threads int
+	var queryLimit, threads, timeOut int
 	links := make(map[int]string)
+	task := make(chan string)
+	response := make(chan map[int]string, 2000)
 
 	flag.StringVar(&site, "site", "", "http://example.com")
 	flag.IntVar(&queryLimit, "l", -1, "Limit of queries. Unlimited by default")
-	flag.IntVar(&threads, "t", 20, "Quantity of threads")
+	flag.IntVar(&threads, "threads", 20, "Quantity of threads")
+	flag.IntVar(&timeOut, "timeout", 10, "Quantity of threads")
 	flag.Parse()
 
 	if !isVaildSiteName(site) {
@@ -31,34 +33,111 @@ func main() {
 
 	fmt.Printf("Start parsing %s\n", site)
 
-	links = getLinks(site)
-	i := 0
-	shift := len(links)
-	for x := 0; x < 100; x++ {
-		fmt.Printf("\nLINKS - %v\n\n", links)
-		fmt.Printf("Length - %d\n", len(links))
-		fmt.Printf("Url - %s\n", links[i])
-		newLinks := getLinks(site + links[i])
-		fmt.Printf("NewLinks - %v\n", newLinks)
-		delete(links, i)
-		i++
-		for _, url := range newLinks {
-			links[shift] = url
-			shift++
-		}
+	go getLinks(task, timeOut, response)
+	task <- site
+	links = <-response
+	// fmt.Printf("LINKS - %v\n", <-response)
+
+	for i := 1; i < threads; i++ {
+		go getLinks(task, timeOut, response)
 	}
 
-	for _, link := range links {
-		fmt.Printf("%s\n", link)
+	for i := 1; i < 100; i++ {
+		task <- site + links[i]
+		fmt.Printf("%s\n", links[i])
+	}
+
+	// go getLinks(site, timeOut, ch)
+	// fmt.Println("First read success")
+	// links := <-ch
+	// fmt.Println("after chanel read")
+	// fmt.Printf("LINKS - %v\n", links)
+	// for i := 0; i < 3; i++ {
+	// 	go getLinks(links[0+i], timeOut, ch)
+	// 	// go getLinks(site, timeOut, ch)
+	// }
+
+	// for i := 0; i < 20; i++ {
+	// 	newLinks := <-ch
+	// 	fmt.Printf("NewLinks - %v\n", newLinks)
+	// 	// go getLinks(site+newLinks[0], timeOut, ch)
+	// }
+
+	// links = getLinks(site, timeOut)
+	// i := 0
+	// shift := len(links)
+	// for x := 0; x < 100; x++ {
+	// 	// fmt.Printf("\nLINKS - %v\n\n", links)
+	// 	fmt.Printf("Length - %d\n", len(links))
+	// 	fmt.Printf("Url - %s\n", links[i])
+	// 	newLinks := getLinks(site+links[i], timeOut)
+	// 	// fmt.Printf("NewLinks - %v\n", newLinks)
+	// 	delete(links, i)
+	// 	i++
+	// 	for _, url := range newLinks {
+	// 		links[shift] = url
+	// 		shift++
+	// 	}
+	// }
+
+	// for _, link := range links {
+	// 	fmt.Printf("%s\n", link)
+	// }
+}
+
+func getLinks(task chan string, timeOut int, response chan<- map[int]string) {
+	client := &http.Client{
+		Timeout: time.Duration(time.Duration(timeOut) * time.Second),
+	}
+
+	for {
+		url := <-task
+		fmt.Println("taking new Task: " + url)
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Add("User-Agent", randomUserAgent())
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		z := html.NewTokenizer(resp.Body)
+		links := make(map[int]string)
+
+		for {
+			tt := z.Next()
+
+			if tt == html.ErrorToken {
+				resp.Body.Close()
+				response <- links
+				fmt.Println("break")
+				break
+			} else if tt == html.StartTagToken {
+				t := z.Token()
+
+				for _, a := range t.Attr {
+					if a.Key == "href" {
+						if isValidLink(a.Val) {
+							links[len(links)] = a.Val
+						}
+						break
+					}
+				}
+			}
+		}
 	}
 }
 
-func isVaildSiteName(name string) bool {
-	if name == "" {
+func isValidLink(str string) bool {
+	if -1 == strings.Index(str, "catalog") {
 		return false
 	}
 
-	if -1 == strings.Index(name, "http://") && -1 == strings.Index(name, "https://") {
+	if -1 != strings.Index(str, "http:") {
+		return false
+	}
+
+	if -1 != strings.Index(str, "https:") {
 		return false
 	}
 
@@ -88,34 +167,14 @@ func randomUserAgent() string {
 	return userAgentCollection[rand.Intn(15)]
 }
 
-func getLinks(url string) map[int]string {
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("User-Agent", randomUserAgent())
-	resp, _ := client.Do(req)
-
-	z := html.NewTokenizer(resp.Body)
-	links := make(map[int]string)
-
-	for {
-		tt := z.Next()
-
-		switch {
-		case tt == html.ErrorToken:
-			resp.Body.Close()
-			return links
-		case tt == html.StartTagToken:
-			t := z.Token()
-
-			for _, a := range t.Attr {
-				if a.Key == "href" {
-					// if -1 != strings.Index(a.Val, "catalog") {
-					if -1 == strings.Index(a.Val, "#") {
-						links[len(links)] = a.Val
-					}
-					break
-				}
-			}
-		}
+func isVaildSiteName(name string) bool {
+	if name == "" {
+		return false
 	}
+
+	if -1 == strings.Index(name, "http://") && -1 == strings.Index(name, "https://") {
+		return false
+	}
+
+	return true
 }
