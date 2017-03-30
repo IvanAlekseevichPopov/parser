@@ -47,10 +47,6 @@ func main() {
 		fmt.Printf("%s\n", links[i])
 	}
 
-	// go getLinks(site, timeOut, ch)
-	// fmt.Println("First read success")
-	// links := <-ch
-	// fmt.Println("after chanel read")
 	// fmt.Printf("LINKS - %v\n", links)
 	// for i := 0; i < 3; i++ {
 	// 	go getLinks(links[0+i], timeOut, ch)
@@ -63,9 +59,6 @@ func main() {
 	// 	// go getLinks(site+newLinks[0], timeOut, ch)
 	// }
 
-	// links = getLinks(site, timeOut)
-	// i := 0
-	// shift := len(links)
 	// for x := 0; x < 100; x++ {
 	// 	// fmt.Printf("\nLINKS - %v\n\n", links)
 	// 	fmt.Printf("Length - %d\n", len(links))
@@ -87,7 +80,8 @@ func main() {
 
 func getLinks(task chan string, timeOut int, response chan<- map[int]string) {
 	client := &http.Client{
-		Timeout: time.Duration(time.Duration(timeOut) * time.Second),
+		Timeout:   time.Duration(time.Duration(timeOut) * time.Second),
+		Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)},
 	}
 
 	for {
@@ -142,6 +136,10 @@ func isValidLink(str string) bool {
 	}
 
 	return true
+}
+
+func getProxy() string {
+	return "proxy"
 }
 
 func randomUserAgent() string {
